@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { departments } from '@/routes/supervisor';
+import { index } from '@/routes/supervisor/users';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
@@ -28,6 +29,11 @@ const mainNavItems: NavItem[] = [
         href:  departments(),
         icon: LayoutGrid,
     },
+    {
+        title: 'Users',
+        href:  index(),
+        icon: LayoutGrid,
+    }
 ];
 
 const footerNavItems: NavItem[] = [

@@ -14,7 +14,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
-     * The attributes that are mass assignable.
+     * Mass assignable.
      *
      * @var list<string>
      */
@@ -25,7 +25,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Hidden for serialization.
      *
      * @var list<string>
      */
@@ -37,7 +37,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Casts.
      *
      * @return array<string, string>
      */
@@ -48,5 +48,35 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Relationships
+     */
+    public function departments()
+    {
+        // pivot: user_departments (user_id, department_id)
+        return $this->belongsToMany(\App\Models\Department::class, 'user_departments');
+    }
+
+    public function roles()
+    {
+        // dept-scoped roles in user_roles (user_id, role_id, department_id)
+        return $this->hasMany(\App\Models\UserRole::class);
+    }
+
+    /**
+     * Check if user has a role (optionally scoped to a department).
+     *
+     * @example $user->hasRole('Supervisor');           // global
+     * @example $user->hasRole('Manager', $deptId);     // dept-scoped
+     */
+    public function hasRole(string $roleName, ?int $departmentId = null): bool
+    {
+        $q = $this->roles()->whereHas('role', fn ($r) => $r->where('name', $roleName));
+        if ($departmentId !== null) {
+            $q->where('department_id', $departmentId);
+        }
+        return $q->exists();
     }
 }

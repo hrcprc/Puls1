@@ -3,16 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Department extends Model
 {
     protected $fillable = ['name', 'code', 'active'];
 
-    // If you want timestamps (created_at/updated_at), leave as default (true).
-    // public $timestamps = true;
-
-    public function users()
+    /**
+     * Users belonging to this department.
+     */
+    public function users(): BelongsToMany
     {
+        // Pivot: user_departments (user_id, department_id)
         return $this->belongsToMany(User::class, 'user_departments');
     }
 }
