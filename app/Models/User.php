@@ -65,6 +65,12 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\UserRole::class);
     }
 
+
+    public function primaryRole() // global role
+    {
+        return $this->hasOne(\App\Models\UserRole::class)->whereNull('department_id')->with('role');
+    }
+
     /**
      * Check if user has a role (optionally scoped to a department).
      *
@@ -73,10 +79,7 @@ class User extends Authenticatable
      */
     public function hasRole(string $roleName, ?int $departmentId = null): bool
     {
-        $q = $this->roles()->whereHas('role', fn ($r) => $r->where('name', $roleName));
-        if ($departmentId !== null) {
-            $q->where('department_id', $departmentId);
-        }
-        return $q->exists();
+        return (bool) optional($this->primaryRole)->role?->name === $roleName;
+
     }
 }

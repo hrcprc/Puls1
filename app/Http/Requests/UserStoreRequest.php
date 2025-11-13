@@ -11,19 +11,12 @@ class UserStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required','string','max:120'],
-            'email'       => ['required','email','max:255','unique:users,email'],
-            'password'    => ['required','string','min:8'],
-            'departments' => ['required','array','min:1'],
-            'departments.*' => ['integer','exists:departments,id'],
-            'role'        => ['required','in:Manager,Worker'], // Supervisor stays global, not here
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'departments.required' => 'Select at least one department.',
+            'name'           => ['required','string','max:120'],
+            'email'          => ['required','email','max:255','unique:users,email'],
+            'password'       => ['required','string','min:8'],
+            'departments'    => ['required','array','min:1'],
+            'departments.*'  => ['integer','exists:departments,id'],
+            'role'           => ['required','in:Supervisor,Manager,Worker'],
         ];
     }
 }

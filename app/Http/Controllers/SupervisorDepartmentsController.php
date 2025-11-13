@@ -7,7 +7,7 @@ use App\Models\Department;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-
+use App\Http\Requests\DepartmentUpdateRequest;
 class SupervisorDepartmentsController extends Controller
 {
     private function ensureSupervisor(): void
@@ -53,11 +53,14 @@ class SupervisorDepartmentsController extends Controller
     public function destroy(\App\Models\Department $department)
     {
         $this->ensureSupervisor();
-        // Optional: block delete if users still assigned
-        // if ($department->users()->exists()) return back()->with('success','Cannot delete: users assigned.');
+
+        // ✅ Prevent delete when users are attached
+        if ($department->users()->exists()) {
+            return back()->with('error', 'Cannot delete department while users are assigned. Detach users first.');
+        }
 
         $department->delete();
-        return back()->with('success','Department deleted.');
+        return back()->with('success', 'Department deleted.');
     }
 
 

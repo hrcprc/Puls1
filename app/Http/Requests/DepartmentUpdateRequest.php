@@ -1,4 +1,3 @@
-// app/Http/Requests/DepartmentUpdateRequest.php
 <?php
 
 namespace App\Http\Requests;

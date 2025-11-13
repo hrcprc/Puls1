@@ -18,6 +18,7 @@ return new class extends Migration {
         Schema::create('roles', function (Blueprint $t) {
             $t->id();
             $t->string('name')->unique(); // Supervisor, Manager, Worker
+            $t->timestamps();
         });
 
         Schema::create('user_departments', function (Blueprint $t) {
@@ -32,6 +33,8 @@ return new class extends Migration {
             $t->foreignId('role_id')->constrained('roles')->cascadeOnDelete();
             $t->foreignId('department_id')->nullable()->constrained('departments')->cascadeOnDelete();
             $t->primary(['user_id','role_id','department_id']);
+
+
         });
     }
 
