@@ -10,9 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminUserSeeder::class,     // creates user, sets Supervisor, attaches MAIN
-
             RbacBootstrapSeeder::class,     // roles + MAIN department
-            PromoteSupervisorSeeder::class, // promote hrvoje1antunovic@gmail.com
         ]);
     }
 }
