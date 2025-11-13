@@ -113,4 +113,49 @@ class SupervisorUsersController extends Controller
             return back()->with('success','User created.');
         });
     }
+
+    public function update(UserUpdateRequest $r, \App\Models\User $user): RedirectResponse
+    {
+        $this->ensureSupervisor();
+
+        return DB::transaction(function () use ($r, $user) {
+            $user->name  = $r->name;
+            $user->email = $r->email;
+            if ($r->filled('password')) {
+                $user->password = Hash::make($r->password);
+            }
+            $user->save();
+
+            // sync departments
+            $user->departments()->sync($r->departments);
+
+            // assign role for those departments (reset then set)
+            $roleId = Role::where('name', $r->role)->value('id');
+            DB::table('user_roles')->where('user_id', $user->id)
+                ->whereIn('department_id', $r->departments)
+                ->delete();
+
+            DB::table('user_roles')->insert(
+                collect($r->departments)->map(fn($deptId)=>[
+                    'user_id'=>$user->id, 'role_id'=>$roleId, 'department_id'=>$deptId
+                ])->all()
+            );
+
+            return back()->with('success','User updated.');
+        });
+    }
+
+    public function destroy(\App\Models\User $user): RedirectResponse
+    {
+        $this->ensureSupervisor();
+
+        return DB::transaction(function () use ($user) {
+            DB::table('user_roles')->where('user_id',$user->id)->delete();
+            $user->departments()->detach();
+            $user->delete();
+            return back()->with('success','User deleted.');
+        });
+    }
+
+
 }

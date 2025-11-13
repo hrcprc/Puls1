@@ -42,4 +42,23 @@ class SupervisorDepartmentsController extends Controller
         Department::create($r->validated());
         return back()->with('success', 'Department created.');
     }
+
+    public function update(DepartmentUpdateRequest $r, \App\Models\Department $department)
+    {
+        $this->ensureSupervisor();
+        $department->update($r->validated());
+        return back()->with('success','Department updated.');
+    }
+
+    public function destroy(\App\Models\Department $department)
+    {
+        $this->ensureSupervisor();
+        // Optional: block delete if users still assigned
+        // if ($department->users()->exists()) return back()->with('success','Cannot delete: users assigned.');
+
+        $department->delete();
+        return back()->with('success','Department deleted.');
+    }
+
+
 }
