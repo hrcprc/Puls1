@@ -6,7 +6,18 @@ type Dept = { id:number; name:string; code:string }
 type Shift = { id:number; name:string; start:string; end:string }
 type JobTemplate = { id:number; name:string; code:string; default_duration:number }
 type Worker = { id:number; name:string; email:string }
-type Slot = { id:number; user_id:number; start:string; end:string; duration:number; status:string; job:string }
+type Slot = {
+    id:number
+    user_id:number
+    start:string
+    end:string
+    duration:number
+    status:string
+    job:string
+    job_template_id:number
+    notes:string|null
+    start_at_local:string
+}
 
 type PageProps = {
     filters: { date:string; department_id:number; shift_id:number }
@@ -26,6 +37,7 @@ const DURATIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 30) // 30..480
 
 export default function ManagerSchedulePage({ filters, options, schedule, workers, slots, flash }: PageProps) {
     const [adding, setAdding] = useState<{ user_id:number; time:string }|null>(null)
+    const [editing, setEditing] = useState<Slot|null>(null)
 
     // index slots by user+start for quick lookup
     const byUserStart = useMemo(()=>{
@@ -95,10 +107,16 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                                                 // after rendering the starting cell with colSpan, skip the covered cells
                                                 return (
                                                     <td key={`${w.id}-${t}`} colSpan={span} className="p-1">
-                                                        <div className="rounded bg-neutral-900 text-white px-2 py-1 flex items-center justify-between">
-                                                            <span className="truncate">{placed.job}</span>
-                                                            <span className="text-xs ml-2">{placed.start}–{placed.end}</span>
-                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="w-full"
+                                                            onClick={()=>setEditing(placed)}
+                                                        >
+                                                            <div className="rounded bg-neutral-900 text-white px-2 py-1 flex items-center justify-between">
+                                                                <span className="truncate">{placed.job}</span>
+                                                                <span className="text-xs ml-2">{placed.start}–{placed.end}</span>
+                                                            </div>
+                                                        </button>
                                                     </td>
                                                 )
                                             }
@@ -129,7 +147,8 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
 
                 {/* Modal */}
                 {adding && schedule && (
-                    <AddSlotModal
+                    <SlotModal
+                        mode="add"
                         scheduleId={schedule.id}
                         users={workers}
                         defaultUserId={adding.user_id}
@@ -139,33 +158,48 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                         onClose={()=>setAdding(null)}
                     />
                 )}
+                {editing && schedule && (
+                    <SlotModal
+                        mode="edit"
+                        scheduleId={schedule.id}
+                        users={workers}
+                        defaultUserId={editing.user_id}
+                        startTimeLocal={editing.start_at_local}
+                        jobTemplates={options.job_templates}
+                        shift={options.shifts.find(s=>s.id===filters.shift_id)!}
+                        slot={editing}
+                        onClose={()=>setEditing(null)}
+                    />
+                )}
             </div>
         </AppLayout>
     )
 }
 
-function AddSlotModal(props: {
+function SlotModal(props: {
+    mode: 'add' | 'edit'
     scheduleId:number
     users: Worker[]
     defaultUserId:number
     startTimeLocal:string // "YYYY-MM-DD HH:mm"
     jobTemplates: JobTemplate[]
     shift: Shift
+    slot?: Slot
     onClose: ()=>void
 }) {
-    const { scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, shift, onClose } = props
+    const { mode, scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, shift, slot, onClose } = props
     const form = useForm({
         schedule_id: scheduleId,
-        user_id: defaultUserId,
-        job_template_id: jobTemplates[0]?.id ?? '',
-        start_at: startTimeLocal,
-        duration_minutes: 30,
-        notes: '',
+        user_id: slot?.user_id ?? defaultUserId,
+        job_template_id: slot?.job_template_id ?? jobTemplates[0]?.id ?? '',
+        start_at: slot?.start_at_local ?? startTimeLocal,
+        duration_minutes: slot?.duration ?? 30,
+        notes: slot?.notes ?? '',
     })
 
     // compute allowed minutes so slot stays within shift
     const allowedMinutes = (() => {
-        const [date, hm] = startTimeLocal.split(' ')
+        const [date, hm] = form.data.start_at.split(' ')
         const s = new Date(`${date}T${hm}:00`)
         const end = shiftEndAsDate(date, shift.start, shift.end)
         return Math.max(0, Math.round((end.getTime() - s.getTime()) / 60000))
@@ -175,7 +209,11 @@ function AddSlotModal(props: {
 
     function submit(e: React.FormEvent) {
         e.preventDefault()
-        form.post('/manager/schedule/slots', {
+        const action = mode === 'add'
+            ? form.post
+            : form.put
+
+        action(`/manager/schedule/slots${mode === 'edit' && slot ? `/${slot.id}` : ''}`, {
             preserveScroll: true,
             onSuccess: onClose,
         })
@@ -184,7 +222,7 @@ function AddSlotModal(props: {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
             <div className="w-full max-w-xl rounded bg-white p-6">
-                <h2 className="mb-4 text-lg font-semibold">Add slot</h2>
+                <h2 className="mb-4 text-lg font-semibold">{mode === 'add' ? 'Add slot' : 'Edit slot'}</h2>
 
                 <form onSubmit={submit} className="grid gap-3">
                     <div className="grid md:grid-cols-2 gap-3">
@@ -234,11 +272,29 @@ function AddSlotModal(props: {
                                   value={form.data.notes} onChange={e=>form.setData('notes', e.target.value)} />
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                        <button type="button" className="rounded border px-4 py-2" onClick={onClose}>Cancel</button>
-                        <button disabled={form.processing} className="rounded bg-black px-4 py-2 text-white disabled:opacity-50">
-                            {form.processing ? 'Saving...' : 'Save slot'}
-                        </button>
+                    <div className="flex justify-between gap-2 flex-wrap items-center">
+                        {mode === 'edit' && slot && (
+                            <button
+                                type="button"
+                                className="rounded border px-4 py-2 text-red-600 border-red-300"
+                                onClick={()=>{
+                                    if (!confirm('Delete this slot?')) return
+                                    router.delete(`/manager/schedule/slots/${slot.id}`, {
+                                        preserveScroll: true,
+                                        onSuccess: onClose,
+                                    })
+                                }}
+                            >
+                                Delete
+                            </button>
+                        )}
+
+                        <div className="flex justify-end gap-2 ml-auto">
+                            <button type="button" className="rounded border px-4 py-2" onClick={onClose}>Cancel</button>
+                            <button disabled={form.processing} className="rounded bg-black px-4 py-2 text-white disabled:opacity-50">
+                                {form.processing ? 'Saving...' : 'Save slot'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -80,7 +80,7 @@ class ManagerScheduleController extends Controller
         if ($schedule) {
             $rows = DB::table('schedule_slots as ss')
                 ->join('job_templates as jt','jt.id','=','ss.job_template_id')
-                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','jt.name as job_name')
+                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','ss.job_template_id','ss.notes','jt.name as job_name')
                 ->where('ss.schedule_id',$schedule->id)
                 ->orderBy('ss.start_at')->get();
 
@@ -94,6 +94,9 @@ class ManagerScheduleController extends Controller
                     'end' => Carbon::parse($row->end_at)->setTimezone($tz)->format('H:i'),
                     'status' => $row->status,
                     'job' => $row->job_name,
+                    'job_template_id' => $row->job_template_id,
+                    'notes' => $row->notes,
+                    'start_at_local' => Carbon::parse($row->start_at)->setTimezone($tz)->format('Y-m-d H:i'),
                 ];
             }
         }
