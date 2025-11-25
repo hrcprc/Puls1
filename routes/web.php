@@ -63,6 +63,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/manager/schedule/slots', [ScheduleSlotsController::class, 'store'])
         ->name('manager.schedule.slots.store');
+    Route::put('/manager/schedule/slots/{slot}', [ScheduleSlotsController::class, 'update'])
+        ->name('manager.schedule.slots.update');
+    Route::delete('/manager/schedule/slots/{slot}', [ScheduleSlotsController::class, 'destroy'])
+        ->name('manager.schedule.slots.destroy');
     // Schedule daily grid
     Route::get('/manager/schedule', [ManagerScheduleController::class, 'index'])
         ->name('manager.schedule.index');
