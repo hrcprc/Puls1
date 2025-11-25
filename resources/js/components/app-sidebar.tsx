@@ -12,7 +12,12 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { departments } from '@/routes/supervisor';
-import { index } from '@/routes/supervisor/users';
+import { index as supervisorUsersIndex } from '@/routes/supervisor/users';
+import { index as managerJobTypesIndex } from '@/routes/manager/job-types';
+import { index as managerJobTemplatesIndex } from '@/routes/manager/job-templates';
+import { index as managerScheduleIndex } from '@/routes/manager/schedule';
+import { index as managerTasksIndex } from '@/routes/manager/tasks';
+import { index as managerShiftsIndex } from '@/routes/manager/shifts';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
@@ -31,7 +36,32 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Users',
-        href:  index(),
+        href:  supervisorUsersIndex(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Job Types',
+        href:  managerJobTypesIndex(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Job Templates',
+        href:  managerJobTemplatesIndex(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Shifts',
+        href:  managerShiftsIndex(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Schedule',
+        href:  managerScheduleIndex(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Tasks',
+        href:  managerTasksIndex(),
         icon: LayoutGrid,
     }
 ];

@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\ManagerJobTemplatesController;
+use App\Http\Controllers\ManagerJobTypesController;
+use App\Http\Controllers\ManagerScheduleController;
+use App\Http\Controllers\ManagerShiftsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -37,14 +41,56 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/supervisor/users/{user}',       [SupervisorUsersController::class,'destroy']);
 
 
+    // Job Types
+    Route::get('/manager/job-types',            [ManagerJobTypesController::class, 'index'])->name('manager.job-types.index');
+    Route::post('/manager/job-types',           [ManagerJobTypesController::class, 'store'])->name('manager.job-types.store');
+    Route::put('/manager/job-types/{jobType}',  [ManagerJobTypesController::class, 'update'])->name('manager.job-types.update');
+    Route::delete('/manager/job-types/{jobType}', [ManagerJobTypesController::class, 'destroy'])->name('manager.job-types.destroy');
+
+    // Job Templates
+    Route::get('/manager/job-templates',                 [ManagerJobTemplatesController::class, 'index'])->name('manager.job-templates.index');
+    Route::post('/manager/job-templates',                [ManagerJobTemplatesController::class, 'store'])->name('manager.job-templates.store');
+    Route::put('/manager/job-templates/{jobTemplate}',   [ManagerJobTemplatesController::class, 'update'])->name('manager.job-templates.update');
+    Route::delete('/manager/job-templates/{jobTemplate}',[ManagerJobTemplatesController::class, 'destroy'])->name('manager.job-templates.destroy');
+
+    // Shifts
+    Route::get('/manager/shifts',           [ManagerShiftsController::class, 'index'])->name('manager.shifts.index');
+     Route::post('/manager/shifts',          [ManagerShiftsController::class, 'store'])->name('manager.shifts.store');
+    Route::put('/manager/shifts/{shift}',   [ManagerShiftsController::class, 'update'])->name('manager.shifts.update');
+    Route::delete('/manager/shifts/{shift}',[ManagerShiftsController::class, 'destroy'])->name('manager.shifts.destroy');
+
+
+
     Route::post('/manager/schedule/slots', [ScheduleSlotsController::class, 'store'])
         ->name('manager.schedule.slots.store');
+    // Schedule daily grid
+    Route::get('/manager/schedule', [ManagerScheduleController::class, 'index'])
+        ->name('manager.schedule.index');
 
     Route::get('/manager/tasks', [TasksDashboardController::class, 'index'])
         ->name('manager.tasks.index');
     //  CSV export
    Route::get('/manager/tasks/export', [TasksDashboardController::class, 'export'])
        ->name('manager.tasks.export');
+
+
+
 });
 
+Route::get('/dev/whoami', function () {
+    $u = auth()->user();
+    if (!$u) return response()->json(['auth' => false]);
+
+    $roles = \Illuminate\Support\Facades\DB::table('user_roles')
+        ->join('roles','roles.id','=','user_roles.role_id')
+        ->where('user_roles.user_id', $u->id)
+        ->selectRaw('roles.name, user_roles.department_id')
+        ->get();
+
+    return response()->json([
+        'auth' => true,
+        'user' => ['id'=>$u->id, 'email'=>$u->email],
+        'roles' => $roles,
+    ]);
+});
 require __DIR__.'/settings.php';
