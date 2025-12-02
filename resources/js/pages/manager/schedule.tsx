@@ -6,6 +6,7 @@ type Dept = { id:number; name:string; code:string }
 type Shift = { id:number; name:string; start:string; end:string }
 type JobTemplate = { id:number; name:string; code:string; default_duration:number }
 type Worker = { id:number; name:string; email:string }
+type Location = { id:number; name:string; department_id:number }
 type Slot = {
     id:number
     user_id:number
@@ -16,6 +17,8 @@ type Slot = {
     job:string
     job_template_id:number
     notes:string|null
+    location_id:number|null
+    location:string|null
     start_at_local:string
 }
 
@@ -30,12 +33,13 @@ type PageProps = {
     schedule: { id:number; times:string[] } | null
     workers: Worker[]
     slots: Slot[]
+    locations: Location[]
     flash?: string|null
 }
 
 const DURATIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 30) // 30..480
 
-export default function ManagerSchedulePage({ filters, options, schedule, workers, slots, flash }: PageProps) {
+export default function ManagerSchedulePage({ filters, options, schedule, workers, slots, locations, flash }: PageProps) {
     const [adding, setAdding] = useState<{ user_id:number; time:string }|null>(null)
     const [editing, setEditing] = useState<Slot|null>(null)
 
@@ -112,9 +116,14 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                                                             className="w-full"
                                                             onClick={()=>setEditing(placed)}
                                                         >
-                                                            <div className="rounded bg-neutral-900 text-white px-2 py-1 flex items-center justify-between">
-                                                                <span className="truncate">{placed.job}</span>
-                                                                <span className="text-xs ml-2">{placed.start}–{placed.end}</span>
+                                                            <div className="rounded bg-neutral-900 text-white px-2 py-1 flex items-center justify-between gap-2">
+                                                                <div className="flex flex-col items-start gap-1">
+                                                                    <span className="truncate">{placed.job}</span>
+                                                                    {placed.location && (
+                                                                        <span className="inline-flex items-center rounded bg-white/15 px-2 py-0.5 text-[11px] leading-tight">{placed.location}</span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-xs ml-2 whitespace-nowrap">{placed.start}–{placed.end}</span>
                                                             </div>
                                                         </button>
                                                     </td>
@@ -147,30 +156,32 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
 
                 {/* Modal */}
                 {adding && schedule && (
-                    <SlotModal
-                        mode="add"
-                        scheduleId={schedule.id}
-                        users={workers}
-                        defaultUserId={adding.user_id}
-                        startTimeLocal={`${filters.date} ${adding.time}`}
-                        jobTemplates={options.job_templates}
-                        shift={options.shifts.find(s=>s.id===filters.shift_id)!}
-                        onClose={()=>setAdding(null)}
-                    />
-                )}
+                        <SlotModal
+                            mode="add"
+                            scheduleId={schedule.id}
+                            users={workers}
+                            defaultUserId={adding.user_id}
+                            startTimeLocal={`${filters.date} ${adding.time}`}
+                            jobTemplates={options.job_templates}
+                            shift={options.shifts.find(s=>s.id===filters.shift_id)!}
+                            locations={locations}
+                            onClose={()=>setAdding(null)}
+                        />
+                    )}
                 {editing && schedule && (
-                    <SlotModal
-                        mode="edit"
-                        scheduleId={schedule.id}
-                        users={workers}
-                        defaultUserId={editing.user_id}
-                        startTimeLocal={editing.start_at_local}
-                        jobTemplates={options.job_templates}
-                        shift={options.shifts.find(s=>s.id===filters.shift_id)!}
-                        slot={editing}
-                        onClose={()=>setEditing(null)}
-                    />
-                )}
+                        <SlotModal
+                            mode="edit"
+                            scheduleId={schedule.id}
+                            users={workers}
+                            defaultUserId={editing.user_id}
+                            startTimeLocal={editing.start_at_local}
+                            jobTemplates={options.job_templates}
+                            shift={options.shifts.find(s=>s.id===filters.shift_id)!}
+                            slot={editing}
+                            locations={locations}
+                            onClose={()=>setEditing(null)}
+                        />
+                    )}
             </div>
         </AppLayout>
     )
@@ -184,18 +195,22 @@ function SlotModal(props: {
     startTimeLocal:string // "YYYY-MM-DD HH:mm"
     jobTemplates: JobTemplate[]
     shift: Shift
+    locations: Location[]
     slot?: Slot
     onClose: ()=>void
 }) {
-    const { mode, scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, shift, slot, onClose } = props
+    const { mode, scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, shift, slot, locations, onClose } = props
     const form = useForm({
         schedule_id: scheduleId,
         user_id: slot?.user_id ?? defaultUserId,
         job_template_id: slot?.job_template_id ?? jobTemplates[0]?.id ?? '',
+        location_id: slot?.location_id ?? locations[0]?.id ?? '',
         start_at: slot?.start_at_local ?? startTimeLocal,
         duration_minutes: slot?.duration ?? 30,
         notes: slot?.notes ?? '',
     })
+
+    const hasLocations = locations.length > 0
 
     // compute allowed minutes so slot stays within shift
     const allowedMinutes = (() => {
@@ -225,7 +240,7 @@ function SlotModal(props: {
                 <h2 className="mb-4 text-lg font-semibold">{mode === 'add' ? 'Add slot' : 'Edit slot'}</h2>
 
                 <form onSubmit={submit} className="grid gap-3">
-                    <div className="grid md:grid-cols-2 gap-3">
+                    <div className="grid md:grid-cols-3 gap-3">
                         <div>
                             <label className="block text-sm">Worker</label>
                             <select className="mt-1 w-full rounded border p-2"
@@ -243,6 +258,19 @@ function SlotModal(props: {
                                 {jobTemplates.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
                             </select>
                             {form.errors.job_template_id && <p className="text-sm text-red-600 mt-1">{form.errors.job_template_id}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm">Location</label>
+                            {hasLocations ? (
+                                <select className="mt-1 w-full rounded border p-2"
+                                        value={form.data.location_id}
+                                        onChange={e=>form.setData('location_id', Number(e.target.value))}>
+                                    {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                                </select>
+                            ) : (
+                                <div className="mt-1 rounded border p-2 text-sm text-gray-600">No locations for this department.</div>
+                            )}
+                            {form.errors.location_id && <p className="text-sm text-red-600 mt-1">{form.errors.location_id}</p>}
                         </div>
                     </div>
 
@@ -291,7 +319,7 @@ function SlotModal(props: {
 
                         <div className="flex justify-end gap-2 ml-auto">
                             <button type="button" className="rounded border px-4 py-2" onClick={onClose}>Cancel</button>
-                            <button disabled={form.processing} className="rounded bg-black px-4 py-2 text-white disabled:opacity-50">
+                            <button disabled={form.processing || !hasLocations} className="rounded bg-black px-4 py-2 text-white disabled:opacity-50">
                                 {form.processing ? 'Saving...' : 'Save slot'}
                             </button>
                         </div>

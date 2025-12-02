@@ -9,6 +9,7 @@ use App\Models\Location;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use Illuminate\Support\Facades\DB;
 
 class ScheduleSlotUpdateRequest extends FormRequest
 {
@@ -21,6 +22,7 @@ class ScheduleSlotUpdateRequest extends FormRequest
             'location_id'      => ['required','exists:locations,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
+            'location_id'      => ['required','exists:locations,id'],
             'start_at'         => ['required','date'],
             'duration_minutes' => ['required','integer','min:30','max:480'],
             'notes'            => ['nullable','string'],
@@ -44,6 +46,13 @@ class ScheduleSlotUpdateRequest extends FormRequest
             $schedule = Schedule::with('slots')->find($data['schedule_id']);
             if (! $schedule) return;
 
+            // Location must belong to the schedule's department
+            if ($data['location_id'] ?? false) {
+                $locationDept = DB::table('locations')->where('id', $data['location_id'])->value('department_id');
+                if ($locationDept !== $schedule->department_id) {
+                    $v->errors()->add('location_id','Location must belong to the selected department.');
+                    return;
+                }
             $location = Location::find($data['location_id']);
             if (! $location) return;
 
