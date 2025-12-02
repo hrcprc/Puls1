@@ -9,7 +9,6 @@ use App\Models\Shift;
 use App\Models\ScheduleSlot;
 use App\Models\Location;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class ScheduleSlotStoreRequest extends FormRequest
 {
@@ -19,7 +18,6 @@ class ScheduleSlotStoreRequest extends FormRequest
     {
         return [
             'schedule_id'      => ['required','exists:schedules,id'],
-            'location_id'      => ['required','exists:locations,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
             'location_id'      => ['required','exists:locations,id'],
@@ -45,21 +43,17 @@ class ScheduleSlotStoreRequest extends FormRequest
             if (! $schedule) return;
 
             // Location must belong to the schedule's department
-            if ($data['location_id'] ?? false) {
-                $locationDept = DB::table('locations')->where('id', $data['location_id'])->value('department_id');
-                if ($locationDept !== $schedule->department_id) {
-                    $v->errors()->add('location_id','Location must belong to the selected department.');
-                    return;
-                }
             $location = Location::find($data['location_id']);
             if (! $location) return;
 
             if ($location->department_id !== $schedule->department_id) {
                 $v->errors()->add('location_id','Location must belong to the schedule department.');
+                return;
             }
 
             if (! $location->active) {
                 $v->errors()->add('location_id','Location must be active.');
+                return;
             }
 
             $tz = 'Europe/Sarajevo';

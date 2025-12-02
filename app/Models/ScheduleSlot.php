@@ -5,7 +5,6 @@ use Illuminate\Database\Eloquent\Model;
 class ScheduleSlot extends Model {
     protected $fillable = [
         'schedule_id',
-        'location_id',
         'user_id',
         'job_template_id',
         'location_id',
