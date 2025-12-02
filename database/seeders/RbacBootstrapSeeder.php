@@ -17,7 +17,6 @@ class RbacBootstrapSeeder extends Seeder
             ['name'=>'Maintenance','active'=>true, 'updated_at'=>now(), 'created_at'=>now()]
         );
 
-        // snippet for RbacBootstrapSeeder::run()
         DB::table('job_types')->updateOrInsert(['code'=>'MECH'], ['name'=>'Mechanical','active'=>true,'created_at'=>now(),'updated_at'=>now()]);
         DB::table('job_types')->updateOrInsert(['code'=>'ELEC'], ['name'=>'Electrical','active'=>true,'created_at'=>now(),'updated_at'=>now()]);
 
@@ -34,6 +33,18 @@ class RbacBootstrapSeeder extends Seeder
             'job_type_id'=>$elecId,'name'=>'Check control panel','default_duration'=>30,'active'=>true,'created_at'=>now(),'updated_at'=>now()
         ]);
 
+        $departments = DB::table('departments')->get(['id','code','name']);
 
+        foreach ($departments as $department) {
+            DB::table('locations')->updateOrInsert(
+                ['department_id' => $department->id, 'code' => "{$department->code}_MAIN"],
+                [
+                    'name' => "{$department->name} - Main Location",
+                    'active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
     }
 }

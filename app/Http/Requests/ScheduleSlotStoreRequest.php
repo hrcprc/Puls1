@@ -7,6 +7,7 @@ use Illuminate\Validation\Validator;
 use App\Models\Schedule;
 use App\Models\Shift;
 use App\Models\ScheduleSlot;
+use App\Models\Location;
 use Carbon\Carbon;
 
 class ScheduleSlotStoreRequest extends FormRequest
@@ -17,6 +18,7 @@ class ScheduleSlotStoreRequest extends FormRequest
     {
         return [
             'schedule_id'      => ['required','exists:schedules,id'],
+            'location_id'      => ['required','exists:locations,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
             'start_at'         => ['required','date'], // ISO local (Europe/Sarajevo) or ISO UTC
@@ -29,7 +31,7 @@ class ScheduleSlotStoreRequest extends FormRequest
     {
         $validator->after(function (Validator $v) {
             $data = $this->validated();
-            if (!isset($data['schedule_id'],$data['start_at'],$data['duration_minutes'])) return;
+            if (!isset($data['schedule_id'],$data['start_at'],$data['duration_minutes'],$data['location_id'])) return;
 
             // Must be multiple of 30
             if ($data['duration_minutes'] % 30 !== 0) {
@@ -39,6 +41,17 @@ class ScheduleSlotStoreRequest extends FormRequest
 
             $schedule = Schedule::with('slots')->find($data['schedule_id']);
             if (! $schedule) return;
+
+            $location = Location::find($data['location_id']);
+            if (! $location) return;
+
+            if ($location->department_id !== $schedule->department_id) {
+                $v->errors()->add('location_id','Location must belong to the schedule department.');
+            }
+
+            if (! $location->active) {
+                $v->errors()->add('location_id','Location must be active.');
+            }
 
             $tz = 'Europe/Sarajevo';
             $startLocal = Carbon::parse($data['start_at'], $tz);
