@@ -7,6 +7,7 @@ class ScheduleSlot extends Model {
         'schedule_id',
         'user_id',
         'job_template_id',
+        'location_id',
         'start_at',
         'duration_minutes',
         'end_at',

@@ -54,12 +54,18 @@ class ManagerScheduleController extends Controller
             $schedule = null;
         }
 
-        // Workers in this dept
+        // Workers and locations in this dept
         $workers = User::select('users.id','users.name','users.email')
             ->whereIn('users.id', function($q) use ($department_id) {
                 $q->from('user_departments')->select('user_id')->where('department_id',$department_id);
             })
             ->orderBy('name')->get();
+
+        $locations = DB::table('locations')
+            ->select('id','name','department_id')
+            ->where('department_id', $department_id)
+            ->orderBy('name')
+            ->get();
 
         // Time grid for the chosen shift (30-min ticks)
         $times = [];
@@ -80,7 +86,8 @@ class ManagerScheduleController extends Controller
         if ($schedule) {
             $rows = DB::table('schedule_slots as ss')
                 ->join('job_templates as jt','jt.id','=','ss.job_template_id')
-                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','ss.job_template_id','ss.notes','jt.name as job_name')
+                ->leftJoin('locations as l','l.id','=','ss.location_id')
+                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','ss.job_template_id','ss.notes','jt.name as job_name','ss.location_id','l.name as location_name')
                 ->where('ss.schedule_id',$schedule->id)
                 ->orderBy('ss.start_at')->get();
 
@@ -96,6 +103,8 @@ class ManagerScheduleController extends Controller
                     'job' => $row->job_name,
                     'job_template_id' => $row->job_template_id,
                     'notes' => $row->notes,
+                    'location_id' => $row->location_id,
+                    'location' => $row->location_name,
                     'start_at_local' => Carbon::parse($row->start_at)->setTimezone($tz)->format('Y-m-d H:i'),
                 ];
             }
@@ -122,6 +131,7 @@ class ManagerScheduleController extends Controller
             ] : null,
             'workers' => $workers,
             'slots'   => $slots, // client will render per-user bars
+            'locations' => $locations,
             'flash'   => session('success') ?? session('error'),
         ]);
     }
