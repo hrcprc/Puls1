@@ -4,7 +4,7 @@ import { dashboard } from '@/routes'
 import { departments } from '@/routes/supervisor'
 import { type BreadcrumbItem } from '@/types'
 import { Head, Link } from '@inertiajs/react'
-import { Building2 } from 'lucide-react'
+import { Building2, MapPin } from 'lucide-react'
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -29,6 +29,24 @@ export default function Dashboard() {
                             <div className="mt-auto">
                                 <div className="text-3xl font-semibold leading-none">Open</div>
                                 <div className="text-xs text-muted-foreground">Manage & create</div>
+                            </div>
+                        </div>
+                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                    </Link>
+
+                    {/* Locations card */}
+                    <Link
+                        href="/supervisor/locations"
+                        className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border hover:border-foreground/30 transition-colors"
+                    >
+                        <div className="absolute inset-0 p-4 flex flex-col">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="size-4" />
+                                <span>Locations</span>
+                            </div>
+                            <div className="mt-auto">
+                                <div className="text-3xl font-semibold leading-none">Open</div>
+                                <div className="text-xs text-muted-foreground">Manage per department</div>
                             </div>
                         </div>
                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />

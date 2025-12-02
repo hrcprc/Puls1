@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TasksFilterRequest;
 use App\Models\Department;
+use App\Models\Location;
 use App\Models\ScheduleSlot;
 use App\Models\Shift;
 use App\Models\User;
@@ -51,6 +52,12 @@ class TasksDashboardController extends Controller
                 // intersect requested with allowed
                 $f['department_ids'] = array_values(array_intersect($f['department_ids'], $managerDeptIds));
             }
+
+            if (!empty($f['location_ids'])) {
+                $f['location_ids'] = Location::whereIn('id', $f['location_ids'])
+                    ->whereIn('department_id', $managerDeptIds)
+                    ->pluck('id')->all();
+            }
         }
 
         // Query base
@@ -60,6 +67,7 @@ class TasksDashboardController extends Controller
             ->leftJoin('departments as d','d.id','=','s.department_id')
             ->leftJoin('shifts as sh','sh.id','=','s.shift_id')
             ->leftJoin('job_templates as jt','jt.id','=','schedule_slots.job_template_id')
+            ->leftJoin('locations as l','l.id','=','schedule_slots.location_id')
             ->select([
                 'schedule_slots.id',
                 's.work_date',
@@ -72,10 +80,12 @@ class TasksDashboardController extends Controller
                 'd.id as department_id','d.name as department_name','d.code as department_code',
                 'sh.id as shift_id','sh.name as shift_name',
                 'jt.id as job_template_id','jt.name as job_name','jt.code as job_code',
+                'l.id as location_id','l.name as location_name',
             ])
             ->whereBetween('s.work_date', [$f['date_from'], $f['date_to']])
             ->when($f['user_ids'], fn($q) => $q->whereIn('u.id', $f['user_ids']))
             ->when($f['department_ids'], fn($q) => $q->whereIn('d.id', $f['department_ids']))
+            ->when($f['location_ids'], fn($q) => $q->whereIn('l.id', $f['location_ids']))
             ->when($f['shift_id'] ?? null, fn($q,$sid) => $q->where('sh.id',$sid))
             ->when($f['status'], fn($q) => $q->whereIn('schedule_slots.status', $f['status']))
             ->orderBy('s.work_date')->orderBy('schedule_slots.start_at');
@@ -97,6 +107,13 @@ class TasksDashboardController extends Controller
             ->when(!$isSupervisor, fn($q)=>$q->whereIn('id',$managerDeptIds))
             ->orderBy('name')->get();
 
+        $locations = Location::select('locations.id','locations.name','locations.department_id','d.name as department_name','d.code as department_code')
+            ->join('departments as d','d.id','=','locations.department_id')
+            ->when(!$isSupervisor && $managerDeptIds, fn($q) => $q->whereIn('locations.department_id',$managerDeptIds))
+            ->orderBy('d.name')
+            ->orderBy('locations.name')
+            ->get();
+
         $users = User::select('id','name','email')
             ->when(!$isSupervisor && $managerDeptIds, function($q) use ($managerDeptIds) {
                 $q->whereIn('id', DB::table('user_departments')
@@ -115,6 +132,7 @@ class TasksDashboardController extends Controller
             ],
             'options'     => [
                 'departments' => $departments,
+                'locations'   => $locations,
                 'users'       => $users,
                 'shifts'      => $shifts,
                 'statuses'    => ['planned','in_progress','done','canceled'],

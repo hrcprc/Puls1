@@ -15,6 +15,8 @@ type Row = {
     department_id:number|null
     department_name:string|null
     department_code:string|null
+    location_id:number|null
+    location_name:string|null
     shift_id:number|null
     shift_name:string|null
     job_template_id:number|null
@@ -22,11 +24,11 @@ type Row = {
     job_code:string|null
 }
 
-type Option = { id:number; name:string; code?:string }
 type PageProps = {
     filters: {
         user_ids:number[]
         department_ids:number[]
+        location_ids:number[]
         shift_id?:number|null
         status:string[]
         date_from:string
@@ -43,6 +45,7 @@ type PageProps = {
     options: {
         users: { id:number; name:string; email:string }[]
         departments: { id:number; name:string; code:string }[]
+        locations: { id:number; name:string; department_id:number; department_name:string; department_code:string }[]
         shifts: { id:number; name:string }[]
         statuses: string[]
     }
@@ -54,13 +57,14 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
     const { data, setData, get, processing } = useForm({
         user_ids: filters.user_ids ?? [],
         department_ids: filters.department_ids ?? [],
+        location_ids: filters.location_ids ?? [],
         shift_id: filters.shift_id ?? '',
         status: filters.status ?? [],
         date_from: filters.date_from,
         date_to: filters.date_to,
     })
 
-    function toggleArray(key: 'user_ids'|'department_ids'|'status', value: number|string, checked: boolean) {
+    function toggleArray(key: 'user_ids'|'department_ids'|'location_ids'|'status', value: number|string, checked: boolean) {
         const set = new Set(data[key] as any[])
         checked ? set.add(value as any) : set.delete(value as any)
         setData(key, Array.from(set) as any)
@@ -75,6 +79,7 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
         setData({
             user_ids: [],
             department_ids: [],
+            location_ids: [],
             shift_id: '',
             status: [],
             date_from: new Date(Date.now() - 6*86400000).toISOString().slice(0,10),
@@ -163,6 +168,21 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
                         </div>
 
                         <div>
+                            <div className="text-sm text-muted-foreground mb-1">Locations</div>
+                            <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-auto pr-2">
+                                {options.locations.map(l=>(
+                                    <label key={l.id} className="inline-flex items-center gap-2 rounded border p-2">
+                                        <input type="checkbox"
+                                               checked={data.location_ids.includes(l.id)}
+                                               onChange={e=>toggleArray('location_ids', l.id, e.target.checked)} />
+                                        <span className="truncate">{l.name} <span className="text-xs text-muted-foreground">({l.department_code})</span></span>
+                                    </label>
+                                ))}
+                                {!options.locations.length && <div className="text-sm text-muted-foreground">No locations yet.</div>}
+                            </div>
+                        </div>
+
+                        <div>
                             <div className="text-sm text-muted-foreground mb-1">Users</div>
                             <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-auto pr-2">
                                 {options.users.map(u=>(
@@ -193,6 +213,7 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
                             <th className="p-2 text-left">Time</th>
                             <th className="p-2 text-left">User</th>
                             <th className="p-2 text-left">Department</th>
+                            <th className="p-2 text-left">Location</th>
                             <th className="p-2 text-left">Shift</th>
                             <th className="p-2 text-left">Job</th>
                             <th className="p-2 text-left">Duration</th>
@@ -212,6 +233,7 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
                                     <td className="p-2">{fmt(start)}–{fmt(end)}</td>
                                     <td className="p-2">{r.user_name}</td>
                                     <td className="p-2">{r.department_name ?? '—'} {r.department_code ? <span className="text-xs text-muted-foreground">({r.department_code})</span> : null}</td>
+                                    <td className="p-2">{r.location_name ?? '—'}</td>
                                     <td className="p-2">{r.shift_name ?? '—'}</td>
                                     <td className="p-2">{r.job_name ?? '—'} {r.job_code ? <span className="text-xs text-muted-foreground">({r.job_code})</span> : null}</td>
                                     <td className="p-2">{r.duration_minutes}m</td>
@@ -221,7 +243,7 @@ export default function Tasks({ filters, rows, metrics, options, tz, flash }: Pa
                             )
                         })}
                         {!rows.data.length && (
-                            <tr><td className="p-3 text-gray-500" colSpan={9}>No tasks found for the chosen filters.</td></tr>
+                            <tr><td className="p-3 text-gray-500" colSpan={10}>No tasks found for the chosen filters.</td></tr>
                         )}
                         </tbody>
                     </table>

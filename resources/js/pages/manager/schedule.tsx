@@ -6,6 +6,7 @@ type Dept = { id:number; name:string; code:string }
 type Shift = { id:number; name:string; start:string; end:string }
 type JobTemplate = { id:number; name:string; code:string; default_duration:number }
 type Worker = { id:number; name:string; email:string }
+type Location = { id:number; name:string }
 type Slot = {
     id:number
     user_id:number
@@ -15,6 +16,8 @@ type Slot = {
     status:string
     job:string
     job_template_id:number
+    location_id:number|null
+    location_name:string|null
     notes:string|null
     start_at_local:string
 }
@@ -25,6 +28,7 @@ type PageProps = {
         departments: Dept[]
         shifts: Shift[]
         job_templates: JobTemplate[]
+        locations: Location[]
         tz: string
     }
     schedule: { id:number; times:string[] } | null
@@ -38,6 +42,7 @@ const DURATIONS = Array.from({ length: 16 }, (_, i) => (i + 1) * 30) // 30..480
 export default function ManagerSchedulePage({ filters, options, schedule, workers, slots, flash }: PageProps) {
     const [adding, setAdding] = useState<{ user_id:number; time:string }|null>(null)
     const [editing, setEditing] = useState<Slot|null>(null)
+    const hasLocations = options.locations.length > 0
 
     // index slots by user+start for quick lookup
     const byUserStart = useMemo(()=>{
@@ -87,6 +92,11 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                     <div className="rounded border p-6 text-gray-600">Select date / department / shift.</div>
                 ) : (
                     <div className="rounded border overflow-auto">
+                        {!hasLocations && (
+                            <div className="bg-amber-50 border-b border-amber-200 p-3 text-amber-800">
+                                Add locations for this department before assigning tasks.
+                            </div>
+                        )}
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 sticky top-0">
                             <tr>
@@ -112,9 +122,14 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                                                             className="w-full"
                                                             onClick={()=>setEditing(placed)}
                                                         >
-                                                            <div className="rounded bg-neutral-900 text-white px-2 py-1 flex items-center justify-between">
-                                                                <span className="truncate">{placed.job}</span>
-                                                                <span className="text-xs ml-2">{placed.start}–{placed.end}</span>
+                                                            <div className="rounded bg-neutral-900 text-white px-2 py-1 space-y-1">
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <span className="truncate">{placed.job}</span>
+                                                                    <span className="text-xs ml-2">{placed.start}–{placed.end}</span>
+                                                                </div>
+                                                                {placed.location_name && (
+                                                                    <div className="text-xs text-neutral-200 truncate">{placed.location_name}</div>
+                                                                )}
                                                             </div>
                                                         </button>
                                                     </td>
@@ -128,8 +143,9 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                                             return (
                                                 <td key={`${w.id}-${t}`} className="p-1">
                                                     <button
-                                                        className="w-full rounded border px-2 py-1 hover:bg-gray-50"
-                                                        onClick={()=>setAdding({ user_id:w.id, time:t })}
+                                                        className="w-full rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
+                                                        disabled={!hasLocations}
+                                                        onClick={()=> setAdding({ user_id:w.id, time:t })}
                                                     >+</button>
                                                 </td>
                                             )
@@ -154,6 +170,7 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                         defaultUserId={adding.user_id}
                         startTimeLocal={`${filters.date} ${adding.time}`}
                         jobTemplates={options.job_templates}
+                        locations={options.locations}
                         shift={options.shifts.find(s=>s.id===filters.shift_id)!}
                         onClose={()=>setAdding(null)}
                     />
@@ -166,6 +183,7 @@ export default function ManagerSchedulePage({ filters, options, schedule, worker
                         defaultUserId={editing.user_id}
                         startTimeLocal={editing.start_at_local}
                         jobTemplates={options.job_templates}
+                        locations={options.locations}
                         shift={options.shifts.find(s=>s.id===filters.shift_id)!}
                         slot={editing}
                         onClose={()=>setEditing(null)}
@@ -183,15 +201,17 @@ function SlotModal(props: {
     defaultUserId:number
     startTimeLocal:string // "YYYY-MM-DD HH:mm"
     jobTemplates: JobTemplate[]
+    locations: Location[]
     shift: Shift
     slot?: Slot
     onClose: ()=>void
 }) {
-    const { mode, scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, shift, slot, onClose } = props
+    const { mode, scheduleId, users, defaultUserId, startTimeLocal, jobTemplates, locations, shift, slot, onClose } = props
     const form = useForm({
         schedule_id: scheduleId,
         user_id: slot?.user_id ?? defaultUserId,
         job_template_id: slot?.job_template_id ?? jobTemplates[0]?.id ?? '',
+        location_id: slot?.location_id ?? locations[0]?.id ?? '',
         start_at: slot?.start_at_local ?? startTimeLocal,
         duration_minutes: slot?.duration ?? 30,
         notes: slot?.notes ?? '',
@@ -225,7 +245,7 @@ function SlotModal(props: {
                 <h2 className="mb-4 text-lg font-semibold">{mode === 'add' ? 'Add slot' : 'Edit slot'}</h2>
 
                 <form onSubmit={submit} className="grid gap-3">
-                    <div className="grid md:grid-cols-2 gap-3">
+                    <div className="grid md:grid-cols-3 gap-3">
                         <div>
                             <label className="block text-sm">Worker</label>
                             <select className="mt-1 w-full rounded border p-2"
@@ -243,6 +263,15 @@ function SlotModal(props: {
                                 {jobTemplates.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
                             </select>
                             {form.errors.job_template_id && <p className="text-sm text-red-600 mt-1">{form.errors.job_template_id}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm">Location</label>
+                            <select className="mt-1 w-full rounded border p-2"
+                                    value={form.data.location_id}
+                                    onChange={e=>form.setData('location_id', Number(e.target.value))}>
+                                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                            </select>
+                            {form.errors.location_id && <p className="text-sm text-red-600 mt-1">{form.errors.location_id}</p>}
                         </div>
                     </div>
 
