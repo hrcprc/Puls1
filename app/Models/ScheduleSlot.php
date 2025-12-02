@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 class ScheduleSlot extends Model {
     protected $fillable = [
         'schedule_id',
+        'location_id',
         'user_id',
         'job_template_id',
         'start_at',
@@ -16,4 +17,5 @@ class ScheduleSlot extends Model {
 
     public function job()      { return $this->belongsTo(JobTemplate::class, 'job_template_id'); }
     public function schedule() { return $this->belongsTo(Schedule::class); }
+    public function location() { return $this->belongsTo(Location::class); }
 }

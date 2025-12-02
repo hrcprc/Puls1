@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Schedule;
 use App\Models\ScheduleSlot;
 use App\Models\Shift;
+use App\Models\Location;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -17,6 +18,7 @@ class ScheduleSlotUpdateRequest extends FormRequest
     {
         return [
             'schedule_id'      => ['required','exists:schedules,id'],
+            'location_id'      => ['required','exists:locations,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
             'start_at'         => ['required','date'],
@@ -29,7 +31,7 @@ class ScheduleSlotUpdateRequest extends FormRequest
     {
         $validator->after(function (Validator $v) {
             $data = $this->validated();
-            if (!isset($data['schedule_id'],$data['start_at'],$data['duration_minutes'])) return;
+            if (!isset($data['schedule_id'],$data['start_at'],$data['duration_minutes'],$data['location_id'])) return;
 
             if ($data['duration_minutes'] % 30 !== 0) {
                 $v->errors()->add('duration_minutes','Duration must be a multiple of 30 minutes.');
@@ -41,6 +43,17 @@ class ScheduleSlotUpdateRequest extends FormRequest
 
             $schedule = Schedule::with('slots')->find($data['schedule_id']);
             if (! $schedule) return;
+
+            $location = Location::find($data['location_id']);
+            if (! $location) return;
+
+            if ($location->department_id !== $schedule->department_id) {
+                $v->errors()->add('location_id','Location must belong to the schedule department.');
+            }
+
+            if (! $location->active) {
+                $v->errors()->add('location_id','Location must be active.');
+            }
 
             if ($slot && $slot->schedule_id !== $schedule->id) {
                 $v->errors()->add('schedule_id','Cannot move a slot to a different schedule.');
