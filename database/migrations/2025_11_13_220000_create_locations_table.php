@@ -16,6 +16,14 @@ return new class extends Migration {
 
         Schema::table('schedule_slots', function (Blueprint $t) {
             $t->foreignId('location_id')->after('job_template_id')->nullable()->constrained('locations')->nullOnDelete();
+        Schema::create('locations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('department_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
+            $table->string('code');
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+            $table->unique(['department_id', 'code']);
         });
     }
 
