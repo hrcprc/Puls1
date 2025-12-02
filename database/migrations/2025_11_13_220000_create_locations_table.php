@@ -7,15 +7,6 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('locations', function (Blueprint $t) {
-            $t->id();
-            $t->foreignId('department_id')->constrained()->cascadeOnDelete();
-            $t->string('name');
-            $t->timestamps();
-        });
-
-        Schema::table('schedule_slots', function (Blueprint $t) {
-            $t->foreignId('location_id')->after('job_template_id')->nullable()->constrained('locations')->nullOnDelete();
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('department_id')->constrained()->cascadeOnDelete();
