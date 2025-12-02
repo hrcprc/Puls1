@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Schedule;
 use App\Models\ScheduleSlot;
 use App\Models\Shift;
+use App\Models\Location;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -19,6 +20,7 @@ class ScheduleSlotUpdateRequest extends FormRequest
             'schedule_id'      => ['required','exists:schedules,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
+            'location_id'      => ['required','exists:locations,id'],
             'start_at'         => ['required','date'],
             'duration_minutes' => ['required','integer','min:30','max:480'],
             'notes'            => ['nullable','string'],
@@ -44,6 +46,11 @@ class ScheduleSlotUpdateRequest extends FormRequest
 
             if ($slot && $slot->schedule_id !== $schedule->id) {
                 $v->errors()->add('schedule_id','Cannot move a slot to a different schedule.');
+            }
+
+            $location = Location::find($data['location_id']);
+            if (! $location || $location->department_id !== $schedule->department_id) {
+                $v->errors()->add('location_id','Location must belong to the selected department.');
             }
 
             $tz = 'Europe/Sarajevo';

@@ -8,6 +8,7 @@ use App\Models\JobTemplate;
 use App\Models\Schedule;
 use App\Models\Shift;
 use App\Models\User;
+use App\Models\Location;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,10 +78,12 @@ class ManagerScheduleController extends Controller
 
         // Existing slots for this schedule
         $slots = [];
+        $slotLocationIds = collect();
         if ($schedule) {
             $rows = DB::table('schedule_slots as ss')
                 ->join('job_templates as jt','jt.id','=','ss.job_template_id')
-                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','ss.job_template_id','ss.notes','jt.name as job_name')
+                ->leftJoin('locations as l','l.id','=','ss.location_id')
+                ->select('ss.id','ss.user_id','ss.start_at','ss.end_at','ss.duration_minutes','ss.status','ss.job_template_id','ss.location_id','ss.notes','jt.name as job_name','l.name as location_name')
                 ->where('ss.schedule_id',$schedule->id)
                 ->orderBy('ss.start_at')->get();
 
@@ -95,10 +98,22 @@ class ManagerScheduleController extends Controller
                     'status' => $row->status,
                     'job' => $row->job_name,
                     'job_template_id' => $row->job_template_id,
+                    'location_id' => $row->location_id,
+                    'location_name' => $row->location_name,
                     'notes' => $row->notes,
                     'start_at_local' => Carbon::parse($row->start_at)->setTimezone($tz)->format('Y-m-d H:i'),
                 ];
+                if ($row->location_id) $slotLocationIds->push($row->location_id);
             }
+        }
+
+        $locations = $department_id
+            ? Location::where('department_id',$department_id)->orderBy('name')->get(['id','name','active'])
+            : collect();
+
+        if ($slotLocationIds->isNotEmpty()) {
+            $extra = Location::whereIn('id',$slotLocationIds)->get(['id','name','active']);
+            $locations = $locations->concat($extra)->unique('id')->values();
         }
 
         $jobTemplates = JobTemplate::where('active',true)->orderBy('name')
@@ -114,6 +129,7 @@ class ManagerScheduleController extends Controller
                 'departments'=>$departments,
                 'shifts'=>$shifts,
                 'job_templates'=>$jobTemplates,
+                'locations'=>$locations,
                 'tz'=>$tz,
             ],
             'schedule' => $schedule? [

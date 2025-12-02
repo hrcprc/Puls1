@@ -7,6 +7,7 @@ use Illuminate\Validation\Validator;
 use App\Models\Schedule;
 use App\Models\Shift;
 use App\Models\ScheduleSlot;
+use App\Models\Location;
 use Carbon\Carbon;
 
 class ScheduleSlotStoreRequest extends FormRequest
@@ -19,6 +20,7 @@ class ScheduleSlotStoreRequest extends FormRequest
             'schedule_id'      => ['required','exists:schedules,id'],
             'user_id'          => ['required','exists:users,id'],
             'job_template_id'  => ['required','exists:job_templates,id'],
+            'location_id'      => ['required','exists:locations,id'],
             'start_at'         => ['required','date'], // ISO local (Europe/Sarajevo) or ISO UTC
             'duration_minutes' => ['required','integer','min:30','max:480'],
             'notes'            => ['nullable','string'],
@@ -39,6 +41,11 @@ class ScheduleSlotStoreRequest extends FormRequest
 
             $schedule = Schedule::with('slots')->find($data['schedule_id']);
             if (! $schedule) return;
+
+            $location = Location::find($data['location_id']);
+            if (! $location || $location->department_id !== $schedule->department_id) {
+                $v->errors()->add('location_id','Location must belong to the selected department.');
+            }
 
             $tz = 'Europe/Sarajevo';
             $startLocal = Carbon::parse($data['start_at'], $tz);

@@ -15,6 +15,8 @@ class TasksFilterRequest extends FormRequest
             'user_ids.*'     => ['integer','exists:users,id'],
             'department_ids' => ['array'],
             'department_ids.*' => ['integer','exists:departments,id'],
+            'location_ids'   => ['array'],
+            'location_ids.*' => ['integer','exists:locations,id'],
             'shift_id'       => ['nullable','integer','exists:shifts,id'],
             'status'         => ['array'],
             'status.*'       => ['in:planned,in_progress,done,canceled'],
@@ -32,6 +34,7 @@ class TasksFilterRequest extends FormRequest
         $f['date_to']   = $f['date_to']   ?? now('Europe/Sarajevo')->toDateString();
         $f['user_ids']  = $f['user_ids'] ?? [];
         $f['department_ids'] = $f['department_ids'] ?? [];
+        $f['location_ids'] = $f['location_ids'] ?? [];
         $f['status']    = $f['status'] ?? [];
         return $f;
     }

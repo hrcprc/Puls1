@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\SupervisorDepartmentsController;
 use App\Http\Controllers\SupervisorUsersController;
+use App\Http\Controllers\SupervisorLocationsController;
 use App\Http\Controllers\ScheduleSlotsController;
 use App\Http\Controllers\TasksDashboardController;
 
@@ -28,6 +29,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/supervisor/departments', [SupervisorDepartmentsController::class,'store']);
     Route::put   ('/supervisor/departments/{department}',    [SupervisorDepartmentsController::class,'update']);
     Route::delete('/supervisor/departments/{department}',    [SupervisorDepartmentsController::class,'destroy']);
+
+    Route::get('/supervisor/locations', [SupervisorLocationsController::class,'index'])
+        ->name('supervisor.locations.index');
+    Route::post('/supervisor/locations', [SupervisorLocationsController::class,'store'])
+        ->name('supervisor.locations.store');
+    Route::put('/supervisor/locations/{location}', [SupervisorLocationsController::class,'update'])
+        ->name('supervisor.locations.update');
+    Route::delete('/supervisor/locations/{location}', [SupervisorLocationsController::class,'destroy'])
+        ->name('supervisor.locations.destroy');
 
 
 

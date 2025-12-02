@@ -35,6 +35,11 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Locations',
+        href: '/supervisor/locations',
+        icon: LayoutGrid,
+    },
+    {
         title: 'Users',
         href:  supervisorUsersIndex(),
         icon: LayoutGrid,
